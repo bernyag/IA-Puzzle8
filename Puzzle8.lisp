@@ -1,6 +1,6 @@
 (setq goal '(0 1 2 3 4 5 6 7 8))
 (setq test1 '(1 3 5 7 8 6 4 2 0)) ; estado solvible: costo 1715
-(setq test2 '(0 1 2 3 4 6 5 7 8)) ; estado insolvible
+(setq test2 '(0 1 2 3 4 8 5 7 6)) ; estado solvible: 286
 (setq test3 '(1 0 2 3 4 6 5 7 8)) ; estado insolvible
 (setq test4 '(1 2 3 4 0 5 6 7 8)) ; estado solvible: costo 282
 (setq test5 '(3 1 2 4 7 5 6 0 8)) ; estado solvible: costo 10
@@ -64,7 +64,10 @@
 ; Hace la resta de r - r2 para calcular los movimientos en horizontal
 ; La suma de estos dos da el costo
 (defun getCost (index goalIndex)
-    (+ (abs (- (multiple-value-bind (q r) (floor index 3) q) (multiple-value-bind (q2 r2) (floor goalIndex 3) q2)))  (abs (- (multiple-value-bind (q r) (floor index 3) r) (multiple-value-bind (q2 r2) (floor goalIndex 3) r2))))
+    (+ 
+      (abs (- (multiple-value-bind (q r) (floor index 3) q) (multiple-value-bind (q2 r2) (floor goalIndex 3) q2)))  
+      (abs (- (multiple-value-bind (q r) (floor index 3) r) (multiple-value-bind (q2 r2) (floor goalIndex 3) r2)))
+    )
 )
 
 ; TODO - Qué hace esto?
@@ -156,7 +159,6 @@
   (key #'identity)
   (last nil)
   (elements nil))
-
 
 (defun general-search (initial-state successor heuristic goalp
 		       &key (samep #'eql)
