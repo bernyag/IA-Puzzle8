@@ -8,9 +8,9 @@
 (setq test5 '(3 1 2 4 7 5 6 0 8)) ; estado solvible: costo 10
 (setq test6 '(3 1 2 4 7 5 0 6 8)) ; estado solvible: costo 12
 
-;CORRER CON: (solve-8-puzzle test5 'manhattan-total-cost-recursive)
+;CORRER CON: (solver test5 'manhattan-total-cost)
 
-(defun solve-8-puzzle (state heuristic)
+(defun solver (state heuristic)
   (general-search state #'get-next-positions heuristic #'is-goal :samep #'equal :enqueue #'enqueue-priority :key #'priority-queue-key))
 
 
@@ -23,10 +23,9 @@
 ; The floor function returns both division and modulus in one fell swoop
 ; My "origin" here is 0,0 or the top,leftmost tile position
 
-;causa stack overflow
-(defun manhattan-total-cost-recursive (current) 
+(defun manhattan-total-cost (current) 
   (if (not (null current) ) 
-      (+ (manhattan-total-cost-recursive (cdr current ) ) (getCost  (- 9 (length current) ) (car current) ) )  
+      (+ (manhattan-total-cost (cdr current ) ) (getCost  (- 9 (length current) ) (car current) ) )  
       0
   )
 )
