@@ -8,9 +8,9 @@
 (setq test5 '(3 1 2 4 7 5 6 0 8)) ; estado solvible: costo 10
 (setq test6 '(3 1 2 4 7 5 0 6 8)) ; estado solvible: costo 12
 
-;CORRER CON: (solver test5 'manhattan-total-cost)
+;CORRER CON: (solver2 test5 'manhattan-total-cost)
  
-(defun solver (state heuristic)
+(defun solver2 (state heuristic)
   (general-search state #'get-next-positions heuristic #'is-goal :samep #'equal :enqueue #'enqueue-priority :key #'priority-queue-key))
 
 ; Manhattan distance Heuristic
@@ -136,22 +136,25 @@
 (defvar *open* nil)
 (defvar *closed* nil)
 (defvar goal (list 0 1 2 3 4 5 6 7 8))
-(defvar *counter* 0)
+(defvar *counter* 1)
 
 (defun init ()
-  (setf nodo0 (list 1 0 0 0 NIL (list 3 1 2 4 7 5 0 6 8)))
+  (setf nodo0 (list 1 0 0 0 NIL (list 1 3 2 4 0 7 5 6 8)))
   (setf *open* nil)
   (setf *closed* nil)
-  (setf *counter* 0)
+  (setf *counter* 1)
   (setf (fourth nodo0) (manhattan-total-cost (get-current nodo0)))
-  (push-open nodo0)
+  (setq flag 0)
+  (push nodo0 *closed*)
 )
 
 (defun get-current (node)
-  (car (last nodo0))
+  (car (last node))
 )
+(defun is-true (a)
+	(eql a t))
 
-(setq flag 0)
+;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
 (defun expand (node)
   (if (eq flag 0)
     (setf positions (get-next-positions (get-current node)))
@@ -163,25 +166,50 @@
       (setf (first child) *counter*)
       (setf (second child) (first node))
       (setf (third child) (incf (third child)))
-      (setf (fourth child) (+ (manhattan-total-cost (get-current node)) (fourth node) ))
       (setf (fifth child) (caar positions))
       (setf (sixth child) (cadar positions))
+      (setf (fourth child) (+ (manhattan-total-cost (get-current child)) (fourth node) ))
       (setf positions (cdr positions))
-      (push child *open*)
-      (incf flag)
-      (expand child)
-)))
-;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
-(defun new-child (node)
-  (let ((child (copy-list node)))
-    (setf (first child) (incf *counter*))
-    (setf (second child) (first node))
-    (setf (third child) (incf (third node)))
-    (setf (fourth child) (+ (manhattan-total-cost (get-current node)) (fourth node) ))
-    (setf (fifth child) ())
-  )
-  child
+      (cond
+        ((some #'is-true (mapcar #'(lambda (x) (equal (sixth child) (sixth x))) *closed*)))
+        (t 
+          (push child *open*)
+          (incf flag)
+          (expand node)
+        )
+      )
+)) (setq flag 0)
 )
+
+(defun solver ()
+  (init)
+  (expand nodo0)
+  (dotimes (n 8)
+    (sort-list)
+    ; popear los 2 de hasta arriba y mandarlos a expand()
+    (if (> (length *open*) 200) (setf *open* (subseq *open* 0 100)) 0)
+    (setf next (car *open*))
+    (if (is-goal (sixth next)) (return t) 0)
+    (push (pop *open*) *closed*)
+    (expand next)
+  )
+)
+
+
+
+(defun compare-depth (a b)
+  (> (third a) (third b)))
+
+(defun compare-cost (a b)
+  (< (fourth a) (fourth b))
+)
+
+(defun sort-list ()
+  (stable-sort 
+    (sort *open* 'compare-cost) 'compare-depth)
+)
+
+;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
 
 ;============================================================================================================================================================
 ;============================================================================================================================================================
