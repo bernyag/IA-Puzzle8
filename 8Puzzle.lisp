@@ -9,10 +9,9 @@
 (setq test6 '(3 1 2 4 7 5 0 6 8)) ; estado solvible: costo 12
 
 ;CORRER CON: (solver test5 'manhattan-total-cost)
-
+ 
 (defun solver (state heuristic)
   (general-search state #'get-next-positions heuristic #'is-goal :samep #'equal :enqueue #'enqueue-priority :key #'priority-queue-key))
-
 
 ; Manhattan distance Heuristic
 ; My representation has the nice property (from the fact that index in my representation 
@@ -133,6 +132,61 @@
   )
 )
 
+;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
+(defvar *open* nil)
+(defvar *closed* nil)
+(defvar goal (list 0 1 2 3 4 5 6 7 8))
+(defvar *counter* 0)
+
+(defun init ()
+  (setf nodo0 (list 1 0 0 0 NIL (list 3 1 2 4 7 5 0 6 8)))
+  (setf *open* nil)
+  (setf *closed* nil)
+  (setf *counter* 0)
+  (setf (fourth nodo0) (manhattan-total-cost (get-current nodo0)))
+  (push-open nodo0)
+)
+
+(defun get-current (node)
+  (car (last nodo0))
+)
+
+(setq flag 0)
+(defun expand (node)
+  (if (eq flag 0)
+    (setf positions (get-next-positions (get-current node)))
+  )
+  (setf child (copy-list node))
+  (if (not (null positions) ) 
+    (progn 
+      (incf *counter*)
+      (setf (first child) *counter*)
+      (setf (second child) (first node))
+      (setf (third child) (incf (third child)))
+      (setf (fourth child) (+ (manhattan-total-cost (get-current node)) (fourth node) ))
+      (setf (fifth child) (caar positions))
+      (setf (sixth child) (cadar positions))
+      (setf positions (cdr positions))
+      (push child *open*)
+      (incf flag)
+      (expand child)
+)))
+;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
+(defun new-child (node)
+  (let ((child (copy-list node)))
+    (setf (first child) (incf *counter*))
+    (setf (second child) (first node))
+    (setf (third child) (incf (third node)))
+    (setf (fourth child) (+ (manhattan-total-cost (get-current node)) (fourth node) ))
+    (setf (fifth child) ())
+  )
+  child
+)
+
+;============================================================================================================================================================
+;============================================================================================================================================================
+;============================================================================================================================================================
+;============================================================================================================================================================
 ;;;;;;;;;;;;; Graph Search ;;;;;;;;;;;;;;;
 
 ; Successor function returns action-state as cost is 1
