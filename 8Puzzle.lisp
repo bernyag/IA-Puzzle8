@@ -139,9 +139,12 @@
 (defvar *counter* 1)
 
 (defun init ()
-  (setf nodo0 (list 1 0 0 0 NIL (list 1 3 2 4 0 7 5 6 8)))
+  ;(setf nodo0 (list 1 0 0 0 NIL (list 8 6 7 2 5 4 3 0 1))) ;dificil
+  (setf nodo0 (list 1 0 0 0 NIL (list 3 1 2 4 7 5 0 6 8))) ;facil
   (setf *open* nil)
   (setf *closed* nil)
+  (setf *backtrack* nil)
+  (setf *backtracker* nil)
   (setf *counter* 1)
   (setf (fourth nodo0) (manhattan-total-cost (get-current nodo0)))
   (setq flag 0)
@@ -170,32 +173,45 @@
       (setf (sixth child) (cadar positions))
       (setf (fourth child) (+ (manhattan-total-cost (get-current child)) (fourth node) ))
       (setf positions (cdr positions))
-      (cond
-        ((some #'is-true (mapcar #'(lambda (x) (equal (sixth child) (sixth x))) *closed*)))
-        (t 
-          (push child *open*)
-          (incf flag)
-          (expand node)
-        )
-      )
-)) (setq flag 0)
-)
+       (cond
+          ((some #'is-true (mapcar #'(lambda (x) (equal (sixth child) (sixth x))) *closed* )))
+          (t 
+            (cond
+              ((some #'is-true (mapcar #'(lambda (x) (equal (sixth child) (sixth x))) *open* )))
+              (t (push child *open*)
+              ))))    
+      (incf flag)
+      (expand node)
+)) (setq flag 0))
 
 (defun solver ()
   (init)
   (expand nodo0)
-  (dotimes (n 8)
+  (dotimes (n 1000000)
     (sort-list)
     ; popear los 2 de hasta arriba y mandarlos a expand()
     (if (> (length *open*) 200) (setf *open* (subseq *open* 0 100)) 0)
     (setf next (car *open*))
-    (if (is-goal (sixth next)) (return t) 0)
+    ;(if (is-goal (sixth next)) (return (backtrack (car *open*))) 0)
     (push (pop *open*) *closed*)
+    (if (is-goal (sixth next)) (return t) 0)
     (expand next)
   )
 )
 
-
+(defun backtrack (father-id list)
+  (setf closed-list (copy-list list))
+  (if (not (null closed-list) )
+    (if (= (caar closed-list) father-id)
+      (progn
+        (push (car closed-list) *backtrack* )
+        (push (fifth (car closed-list)) *backtracker* )
+        (backtrack (cadar closed-list) (cdr closed-list))
+      )
+      (backtrack father-id (cdr closed-list))
+    )
+  )t 
+)
 
 (defun compare-depth (a b)
   (> (third a) (third b)))
@@ -208,203 +224,3 @@
   (stable-sort 
     (sort *open* 'compare-cost) 'compare-depth)
 )
-
-;(nodeId, padre, profundidad, costo, dir, (x0, x1, x2, ... , x8))
-
-;============================================================================================================================================================
-;============================================================================================================================================================
-;============================================================================================================================================================
-;============================================================================================================================================================
-;;;;;;;;;;;;; Graph Search ;;;;;;;;;;;;;;;
-
-; Successor function returns action-state as cost is 1
-(defun expand (successor heuristic node)
-  (let ((doubles (funcall successor (node-state node))))
-    (mapcar (lambda (action-state)
-	      (let ((action (car action-state))
-		    (state (cadr action-state)))
-		(make-node :state state 
-			   :parent node
-			   :action action 
-			   :path-cost (+ (node-path-cost node) 1)
-			   :heuristic (funcall heuristic state)
-			   :depth (1+ (node-depth node)))
-		))
-	    doubles)
-    ))
-
-(defun action-sequence (node &optional (actions nil))
-  (if (node-parent node)
-    (action-sequence (node-parent node) (cons (node-action node) actions))
-    actions
-    ))
-
-(defstruct node 
-  (state nil)
-  (parent nil)
-  (action nil)
-  (path-cost 0)
-  (heuristic 0)
-  (depth 0))
-
-(defvar *nodes-expanded*)
-
-; Key for Priority Queue
-(defun priority-queue-key(node)
-  (+ (node-path-cost node) (node-heuristic node))
-)
-
-(defun general-search (initial-state successor heuristic goalp
-		       &key (samep #'eql)
-		            (enqueue #'enqueue-LIFO) 
-		            (key #'identity))
-  (setf *nodes-expanded* 0)
-  (let ((fringe (make-q :enqueue enqueue :key key)))
-    (q-insert fringe (list (make-node :state initial-state)))
-    (values 
-     (graph-search fringe nil successor heuristic goalp samep)
-     *nodes-expanded*)
-    ))
-
-(defun graph-search (fringe closed successor heuristic goalp samep)
-  (unless (q-emptyp fringe)
-    (let ((node (q-remove fringe)))
-      (cond ((funcall goalp (node-state node)) 
-	     (action-sequence node))
-            ((member (node-state node) closed 
-		     :test samep :key #'node-state)
-	     (graph-search fringe closed successor heuristic goalp samep))
-            (t 
-	     (let ((successors (expand successor heuristic node)))
-	       (setf *nodes-expanded* 
-		     (+ *nodes-expanded* (length successors)))
-	       (graph-search (q-insert fringe successors)
-			     (cons node closed)
-			     successor heuristic goalp samep)))
-            ))
-    ))
-
-;;;; The Queue datatype
-
-;;; We can remove elements form the front of a queue.  We can add elements in
-;;; three ways: to the front (LIFO, or stack), to the back (FIFO, or simple queue), or by priority (priority queue).
-;;; This is done with the following enqueing functions specified when we make the queue, which make use of the
-;;; following implementations of the elements:
-;;;   ENQUEUE-LIFO - elements are a list
-;;;   ENQUEUE-FIFO   - elements are a list
-;;;   ENQUEUE-PRIORITY - elements are a heap, implemented as an array
-;;; The best element in the queue is always in position 0.
-;;; For priority queues, we can specify a key function that should return the priority value of an element.
-;;; For FIFO queues, we maintain a pointer to the last element for efficient enqueuing.
-
-(defstruct q
-  (enqueue #'enqueue-FIFO)
-  (key #'identity)
-  (last nil)
-  (elements nil))
-
-;;;; Operations on Queues
-
-(defun q-emptyp (q)
-  "Returns T if queue is empty."
-  (= (length (q-elements q)) 0))       ; (length x) works for both lists and arrays with fill-pointers
-
-(defun q-front (q)
-  "Returns the element at the front of the queue."
-  (elt (q-elements q) 0))              ; (elt x n) works for both lists and arrays
-
-(defun q-remove (q)
-  "Removes the element from the front of the queue and returns it."
-  (if (listp (q-elements q))
-      (pop (q-elements q))             ; (pop x) alters x by removing the car, then returns the item removed
-    (heap-pop (q-elements q) (q-key q))))
-
-(defun q-insert (q items)
-  "Inserts the items into the queue, according to the queue's enqueuing function."
-  (funcall (q-enqueue q) q items)
-  q)
-
-;;;; The Three Enqueing Functions
-
-(defun enqueue-LIFO (q items)
-  "Adds a list of items to the front of the queue."
-  (setf (q-elements q) (nconc items (q-elements q)))  ; (nconc x y) is destructive version of (append x y)
-  items
-  )
-
-(defun enqueue-FIFO (q items)
-  "Adds a list of items to the end of the queue."
-  (if (q-emptyp q) 
-      (setf (q-elements q) items)
-    (setf (cdr (q-last q)) items))
-  (setf (q-last q) (last items))
-  items
-  )
-
-(defun enqueue-priority (q items)
-  "Inserts the items by priority determined by the queue's key function."
-  ;; If first insert, create the heap
-  (when (null (q-elements q))
-    (setf (q-elements q) (make-heap)))
-  ;; Now insert the items
-  (mapc (lambda (item)
-	  (heap-insert (q-elements q) item (q-key q)))
-	items)
-  )
-
-;;;; The Heap Implementation of Priority Queues
-
-;;; The idea is to store a heap in an array so that the heap property is
-;;; maintained for all elements: heap[Parent(i)] <= heap[i].  Note that we
-;;; start at index 0, not 1, and that we put the lowest value at the top of
-;;; the heap, not the highest value.
-
-(defun heap-val (heap i key) (funcall key (elt heap i)))
-(defun heap-parent (i) (floor (1- i) 2))
-(defun heap-left (i) (+ 1 i i))
-(defun heap-right (i) (+ 2 i i))
-(defun heap-leafp (heap i) (> i (1- (floor (length heap) 2))))
-
-(defun heapify (heap i key)
-  "Assume that the children of i are heaps, but that heap[i] may be 
-  larger than its children.  If it is, moves heap[i] down where it belongs."
-  (unless (heap-leafp heap i)
-    (let ((l (heap-left i))
-	  (r (heap-right i)))
-      (let ((smaller-child (if (and (< r (length heap))
-				    (< (heap-val heap r key) (heap-val heap l key)))
-			       r l)))
-	(when (> (heap-val heap i key) (heap-val heap smaller-child key))
-	  (rotatef (elt heap i) (elt heap smaller-child))    ; (rotatef x y) swaps values of x and y
-	  (heapify heap smaller-child key))))
-    ))
-
-(defun heap-pop (heap key)
-  "Pops the best (lowest valued) item off the heap."
-  (let ((min (elt heap 0)))
-    (setf (elt heap 0) (elt heap (1- (length heap))))
-    (decf (fill-pointer heap))        ; (decf x) decrements x
-    (heapify heap 0 key)
-    min))
-
-(defun heap-insert (heap item key)
-  "Puts an item into a heap."
-  (vector-push-extend nil heap)       ; (vector-push-extend value array) adds the value to the next
-                                      ; available position in the array, incrementing the fill-pointer
-                                      ; and increasing the size of the array if necessary.
-  (setf (elt heap (heap-find-pos heap (1- (length heap)) (funcall key item) key)) 
-	item)
-
-  )
-
-(defun heap-find-pos (heap i val key)
-  "Bubbles up from i to find position for val, moving items down in the process."
-  (cond ((or (zerop i) (< (heap-val heap (heap-parent i) key) val))
-	 i)
-	(t
-	 (setf (elt heap i) (elt heap (heap-parent i)))
-	 (heap-find-pos heap (heap-parent i) val key))
-	))
-
-(defun make-heap (&optional (size 100))
-  (make-array size :fill-pointer 0 :adjustable t))
