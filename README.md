@@ -17,7 +17,6 @@ El programa está compuesto de dos partes: el frontend (java) y el backend (clis
 
 ## Manual de uso
 1. Abrir el proyecto 8Puzzle en Java
-2. Cambiar la ruta del archivo 
 3. Correr el proyecto
 4. Elegir un estado inicial dentro de la GUI al hacer click en los cuadros e ingresar un dígito de 0 a 8 sin repetir
 5. Hacer click en "Resolver", esto va a llamar el método de clisp para calcular la ruta y la va a regresar en el TextBox del GUI
